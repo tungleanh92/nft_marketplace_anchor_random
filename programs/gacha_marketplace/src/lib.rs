@@ -46,36 +46,36 @@ pub mod gacha_marketplace {
         // _description: String,
         // _cash_back: u8,
     ) -> Result<()> {
-        require!(_price > 0, error::Error::InvalidPrice);
-        // require!(_cash_back < 100, error::Error::CashbackMax);
+        // require!(_price > 0, error::Error::InvalidPrice);
+        // // require!(_cash_back < 100, error::Error::CashbackMax);
 
-        let state = &mut ctx.accounts.state_account;
+        // let state = &mut ctx.accounts.state_account;
 
-        let item = MarketItem {
-            item_id: state.item_ids,
-            // token_program_id: _token_program_id,
-            // mint_address: _mint_address,
-            // seller: ctx.accounts.user.key(),
-            owner: None,
-            price: _price,
-            // file_name: _file_name,
-            // description: _description,
-            // cash_back: _cash_back,
-            sold: false,
-            gacha: false,
-        };
-        state.item_ids += 1;
-        state.map.push(item);
+        // let item = MarketItem {
+        //     item_id: state.item_ids,
+        //     // token_program_id: _token_program_id,
+        //     // mint_address: _mint_address,
+        //     // seller: ctx.accounts.user.key(),
+        //     owner: None,
+        //     price: _price,
+        //     // file_name: _file_name,
+        //     // description: _description,
+        //     // cash_back: _cash_back,
+        //     sold: false,
+        //     gacha: false,
+        // };
+        // state.item_ids += 1;
+        // state.map.push(item);
 
-        // TRANSFER NFT //
-        let transfer_instruction = Transfer {
-            from: ctx.accounts.from.to_account_info(),
-            to: ctx.accounts.to.to_account_info(),
-            authority: ctx.accounts.user.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, transfer_instruction);
-        anchor_spl::token::transfer(cpi_ctx, 1)?;
+        // // TRANSFER NFT //
+        // let transfer_instruction = Transfer {
+        //     from: ctx.accounts.from.to_account_info(),
+        //     to: ctx.accounts.to.to_account_info(),
+        //     authority: ctx.accounts.user.to_account_info(),
+        // };
+        // let cpi_program = ctx.accounts.token_program.to_account_info();
+        // let cpi_ctx = CpiContext::new(cpi_program, transfer_instruction);
+        // anchor_spl::token::transfer(cpi_ctx, 1)?;
 
         Ok(())
     }
@@ -134,102 +134,102 @@ pub mod gacha_marketplace {
         _fee: u128,
         _bump: u8,
     ) -> Result<()> {
-        let state = &mut ctx.accounts.state_account;
-        let remaining_accounts = &mut ctx.remaining_accounts;
+        // let state = &mut ctx.accounts.state_account;
+        // let remaining_accounts = &mut ctx.remaining_accounts;
 
-        let item_count = state.item_ids;
-        let item_sold = state.item_sold;
-        let unsold_item_count = item_count - item_sold;
+        // let item_count = state.item_ids;
+        // let item_sold = state.item_sold;
+        // let unsold_item_count = item_count - item_sold;
 
-        let mut items = Vec::new();
-        for i in 0..item_count {
-            let item = state.map.get(i as usize).unwrap().to_owned();
-            if item.owner == None && item.price == _price {
-                items.insert(i as usize, item);
-            }
-        }
+        // let mut items = Vec::new();
+        // for i in 0..item_count {
+        //     let item = state.map.get(i as usize).unwrap().to_owned();
+        //     if item.owner == None && item.price == _price {
+        //         items.insert(i as usize, item);
+        //     }
+        // }
 
-        let mut gacha_items = HashMap::new();
-        require!(items.len() > 0, error::Error::ItemsUnavailableForGacha);
-        require!(
-            usize::from(_qty) <= items.len(),
-            error::Error::InvalidQuantity
-        );
-        let mut random_output: Vec<u64> = Vec::new();
-        let mut seed = Clock::get()?.unix_timestamp as u64;
-        let mut gacha_index = 0;
-        for i in 0.._qty {
-            seed ^= seed >> 12;
-            seed ^= seed << 25;
-            seed ^= seed >> 27;
-            // seed *= 0x2545F4914F6CDD1D;
-            loop {
-                gacha_index = ((generate_random_f64(seed) * 1000.0) as u64) % (items.len() as u64);
-                if random_output.contains(&(gacha_index)) == false {
-                    break;
-                }
-                seed += 16454654645667;
-            }
+        // let mut gacha_items = HashMap::new();
+        // require!(items.len() > 0, error::Error::ItemsUnavailableForGacha);
+        // require!(
+        //     usize::from(_qty) <= items.len(),
+        //     error::Error::InvalidQuantity
+        // );
+        // let mut random_output: Vec<u64> = Vec::new();
+        // let mut seed = Clock::get()?.unix_timestamp as u64;
+        // let mut gacha_index = 0;
+        // for i in 0.._qty {
+        //     seed ^= seed >> 12;
+        //     seed ^= seed << 25;
+        //     seed ^= seed >> 27;
+        //     // seed *= 0x2545F4914F6CDD1D;
+        //     loop {
+        //         gacha_index = ((generate_random_f64(seed) * 1000.0) as u64) % (items.len() as u64);
+        //         if random_output.contains(&(gacha_index)) == false {
+        //             break;
+        //         }
+        //         seed += 16454654645667;
+        //     }
 
-            let item = items.get(*&gacha_index as usize).unwrap().to_owned();
-            gacha_items.insert(i, item);
-            random_output.push(gacha_index);
-        }
+        //     let item = items.get(*&gacha_index as usize).unwrap().to_owned();
+        //     gacha_items.insert(i, item);
+        //     random_output.push(gacha_index);
+        // }
 
-        let seeds = vec![_bump];
-        let seeds = vec![b"auth".as_ref(), seeds.as_slice()];
-        let seeds = vec![seeds.as_slice()];
-        let seeds = seeds.as_slice();
-        for idx in 0..(_qty as usize) {
-            let item_id = gacha_items.get(&(idx as u8)).unwrap().item_id;
-            let random = *&random_output.get(idx).unwrap().to_owned() as usize;
-            let mut selected_item = state.map.get(item_id as usize).unwrap().to_owned();
+        // let seeds = vec![_bump];
+        // let seeds = vec![b"auth".as_ref(), seeds.as_slice()];
+        // let seeds = vec![seeds.as_slice()];
+        // let seeds = seeds.as_slice();
+        // for idx in 0..(_qty as usize) {
+        //     let item_id = gacha_items.get(&(idx as u8)).unwrap().item_id;
+        //     let random = *&random_output.get(idx).unwrap().to_owned() as usize;
+        //     let mut selected_item = state.map.get(item_id as usize).unwrap().to_owned();
 
-            // create ata for receiver
-            anchor_spl::associated_token::create(CpiContext::new(
-                ctx.accounts.associated_token_program.to_account_info(),
-                anchor_spl::associated_token::Create {
-                    payer: ctx.accounts.user.to_account_info(),
-                    associated_token: remaining_accounts
-                        .get((random as usize) * 3 + 2)
-                        .unwrap()
-                        .to_owned(),
-                    authority: ctx.accounts.user.to_account_info(),
-                    mint: remaining_accounts[(random as usize) * 3].to_account_info(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
-                    token_program: ctx.accounts.token_program.to_account_info(),
-                },
-            ))?;
+        //     // create ata for receiver
+        //     anchor_spl::associated_token::create(CpiContext::new(
+        //         ctx.accounts.associated_token_program.to_account_info(),
+        //         anchor_spl::associated_token::Create {
+        //             payer: ctx.accounts.user.to_account_info(),
+        //             associated_token: remaining_accounts
+        //                 .get((random as usize) * 3 + 2)
+        //                 .unwrap()
+        //                 .to_owned(),
+        //             authority: ctx.accounts.user.to_account_info(),
+        //             mint: remaining_accounts[(random as usize) * 3].to_account_info(),
+        //             system_program: ctx.accounts.system_program.to_account_info(),
+        //             token_program: ctx.accounts.token_program.to_account_info(),
+        //         },
+        //     ))?;
 
-            // transfer nft
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                anchor_spl::token::Transfer {
-                    from: remaining_accounts[random * 3 + 1].to_account_info(),
-                    to: remaining_accounts[random * 3 + 2].to_account_info(),
-                    authority: ctx.accounts.auth.to_account_info(),
-                },
-                &seeds,
-            );
-            anchor_spl::token::transfer(cpi_ctx, 1)?;
+        //     // transfer nft
+        //     let cpi_ctx = CpiContext::new_with_signer(
+        //         ctx.accounts.token_program.to_account_info(),
+        //         anchor_spl::token::Transfer {
+        //             from: remaining_accounts[random * 3 + 1].to_account_info(),
+        //             to: remaining_accounts[random * 3 + 2].to_account_info(),
+        //             authority: ctx.accounts.auth.to_account_info(),
+        //         },
+        //         &seeds,
+        //     );
+        //     anchor_spl::token::transfer(cpi_ctx, 1)?;
 
-            selected_item.owner = Some(ctx.accounts.user.key());
-            selected_item.gacha = true;
-            state.item_sold += 1;
-        }
+        //     selected_item.owner = Some(ctx.accounts.user.key());
+        //     selected_item.gacha = true;
+        //     state.item_sold += 1;
+        // }
 
-        // transfer fee to seller map[0]
-        anchor_lang::solana_program::program::invoke(
-            &anchor_lang::solana_program::system_instruction::transfer(
-                &ctx.accounts.user.key(),
-                &ctx.accounts.seller.key(),
-                _fee.try_into().unwrap(),
-            ),
-            &[
-                ctx.accounts.user.to_account_info(),
-                ctx.accounts.seller.to_account_info(),
-            ],
-        )?;
+        // // transfer fee to seller map[0]
+        // anchor_lang::solana_program::program::invoke(
+        //     &anchor_lang::solana_program::system_instruction::transfer(
+        //         &ctx.accounts.user.key(),
+        //         &ctx.accounts.seller.key(),
+        //         _fee.try_into().unwrap(),
+        //     ),
+        //     &[
+        //         ctx.accounts.user.to_account_info(),
+        //         ctx.accounts.seller.to_account_info(),
+        //     ],
+        // )?;
 
         Ok(())
     }
